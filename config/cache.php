@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'driver' => env('CACHE_DRIVER', 'file'),
+
+    'path' => 'storage/cache',
+
+    'default_ttl' => 3600,
+
+    'prefix' => 'lufly_',
+];

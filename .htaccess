@@ -1,0 +1,9 @@
+Options -Indexes
+RewriteEngine On
+
+# Serve real files at project root directly (frontend assets, logo, docs).
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Everything else is routed through the front controller in public/.
+RewriteRule ^(.*)$ public/$1 [QSA,L]

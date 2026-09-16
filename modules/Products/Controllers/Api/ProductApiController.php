@@ -1,0 +1,91 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Products\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Core\Http\ApiResponse;
+use Core\Http\JsonResponse;
+use Core\Http\Request;
+use Core\Localization\Translator;
+use Modules\Products\Services\ProductService;
+
+class ProductApiController extends Controller
+{
+    public function __construct(
+        private readonly ProductService $products,
+        private readonly Translator $translator,
+    ) {
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        $paginator = $this->products->paginate([
+            'locale' => (string) $request->query('locale', $this->translator->getLocale()),
+            'status' => (string) $request->query('status', 'active'),
+            'search' => (string) $request->query('q', ''),
+        ], (int) $request->query('page', '1'), (int) $request->query('per_page', '10'));
+
+        $items = array_map(
+            fn ($product) => $product->translate((string) $request->query('locale', $this->translator->getLocale())),
+            $paginator->items(),
+        );
+
+        return ApiResponse::paginated($items, $paginator);
+    }
+
+    public function show(int $id): JsonResponse
+    {
+        $product = $this->products->find($id);
+
+        return ApiResponse::success([
+            'product' => $product->translate($this->translator->getLocale()),
+            'translations' => $product->translations(),
+        ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'sku' => 'required|string|max:100|unique:products,sku',
+            'price' => 'required|numeric|min:0',
+            'status' => 'required|in:active,inactive,draft',
+            'slug' => 'nullable|string|max:255',
+            'translations' => 'required|array',
+        ]);
+
+        $core = [
+            'sku' => $data['sku'],
+            'price' => $data['price'],
+            'status' => $data['status'],
+            'slug' => $data['slug'] ?? '',
+        ];
+
+        $product = $this->products->create($core, (array) $data['translations']);
+
+        return ApiResponse::success(['product' => $product->toArray()], trans('common.saved'), 201);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'sku' => 'nullable|string|max:100|unique:products,sku,' . $id,
+            'price' => 'nullable|numeric|min:0',
+            'status' => 'nullable|in:active,inactive,draft',
+            'translations' => 'nullable|array',
+        ]);
+
+        $core = array_intersect_key($data, array_flip(['sku', 'price', 'status', 'slug']));
+        $product = $this->products->update($id, $core, (array) ($data['translations'] ?? []));
+
+        return ApiResponse::success(['product' => $product->toArray()], trans('common.saved'));
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $this->products->delete($id);
+
+        return ApiResponse::success(null, trans('common.deleted'));
+    }
+}
