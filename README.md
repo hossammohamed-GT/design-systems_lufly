@@ -98,3 +98,5 @@ docs/       architecture docs + ADRs
 
 The legacy visual atlas of this repository is preserved at
 [`frontend/design-system/atlas.html`](frontend/design-system/atlas.html).
+
+.
